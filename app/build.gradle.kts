@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "br.tmvdl.android.camera"
     compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "br.tmvdl.android.camera"
@@ -54,7 +55,7 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.4")
 
     // WebRTC
-    implementation("org.webrtc:google-webrtc:1.0.32006")
+    implementation("com.dafruits:webrtc:123.0.0")
 
     // QR Code scanning
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
