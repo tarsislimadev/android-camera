@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "br.tmvdl.android.camera"
     compileSdk = 36
-    buildToolsVersion = "36.0.0"
+    buildToolsVersion = "35.0.0"
 
     defaultConfig {
         applicationId = "br.tmvdl.android.camera"
