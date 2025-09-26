@@ -49,22 +49,6 @@ jobs:
     - name: Build Debug APK
       run: ./gradlew assembleDebug
 
-    - name: Build Release APK
-      run: ./gradlew assembleRelease
-
-    - name: Sign Release APK
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-      uses: r0adkll/sign-android-release@v1
-      id: sign_app
-      with:
-        releaseDirectory: app/build/outputs/apk/release
-        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-        alias: ${{ secrets.ALIAS }}
-        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-        keyPassword: ${{ secrets.KEY_PASSWORD }}
-      env:
-        BUILD_TOOLS_VERSION: "34.0.0"
-
     - name: Get version from tag
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
       id: get_version
@@ -74,13 +58,6 @@ jobs:
       run: |
         cd app/build/outputs/apk/debug/
         mv app-debug.apk AndroidCamera-debug.apk
-        cd ../release/
-        if [ -f "app-release-unsigned.apk" ]; then
-          mv app-release-unsigned.apk AndroidCamera-release-unsigned.apk
-        fi
-        if [ -f "app-release.apk" ]; then
-          mv app-release.apk AndroidCamera-release.apk
-        fi
 
     - name: Upload Debug APK as artifact
       uses: actions/upload-artifact@v4
@@ -88,11 +65,6 @@ jobs:
         name: debug-apk
         path: app/build/outputs/apk/debug/AndroidCamera-debug.apk
 
-    - name: Upload Release APK as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: release-apk
-        path: app/build/outputs/apk/release/AndroidCamera-*.apk
 
     - name: Create Release
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
@@ -113,7 +85,6 @@ jobs:
           - 📡 Real-time camera stream sharing
 
           ### Downloads
-          - **AndroidCamera-release.apk**: Signed release version (recommended)
           - **AndroidCamera-debug.apk**: Debug version for testing
 
           ### Installation
@@ -134,7 +105,6 @@ jobs:
           - Internet connection for WebRTC streaming
         files: |
           app/build/outputs/apk/debug/AndroidCamera-debug.apk
-          app/build/outputs/apk/release/AndroidCamera-*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -158,10 +128,8 @@ jobs:
 
           ### Downloads
           - **AndroidCamera-debug.apk**: Debug version for testing
-          - **AndroidCamera-release-unsigned.apk**: Unsigned release version
         files: |
           app/build/outputs/apk/debug/AndroidCamera-debug.apk
-          app/build/outputs/apk/release/AndroidCamera-*.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
