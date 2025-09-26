@@ -39,11 +39,7 @@ jobs:
     - name: Build debug APK
       run: ./gradlew assembleDebug
 
-    - name: List APK file
-      run: find -name '*.apk'
-
-    - name: Upload debug APK
+    - name: Upload debug APK files
       uses: actions/upload-artifact@v4
       with:
-        name: debug-apk-ci
-        path: app/build/outputs/apk/debug/app-debug.apk
+        path: $( find -name '*.apk' )
