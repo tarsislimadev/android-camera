@@ -1,0 +1,210 @@
+name: Android Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release Type'
+        required: true
+        default: 'draft'
+        type: choice
+        options:
+          - draft
+          - prerelease
+          - release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+
+    - name: Sign Release APK
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: r0adkll/sign-android-release@v1
+      id: sign_app
+      with:
+        releaseDirectory: app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+      env:
+        BUILD_TOOLS_VERSION: "34.0.0"
+
+    - name: Get version from tag
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Rename APK files
+      run: |
+        cd app/build/outputs/apk/debug/
+        mv app-debug.apk AndroidCamera-debug.apk
+        cd ../release/
+        if [ -f "app-release-unsigned.apk" ]; then
+          mv app-release-unsigned.apk AndroidCamera-release-unsigned.apk
+        fi
+        if [ -f "app-release.apk" ]; then
+          mv app-release.apk AndroidCamera-release.apk
+        fi
+
+    - name: Upload Debug APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-apk
+        path: app/build/outputs/apk/debug/AndroidCamera-debug.apk
+
+    - name: Upload Release APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-apk
+        path: app/build/outputs/apk/release/AndroidCamera-*.apk
+
+    - name: Create Release
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        name: Release ${{ steps.get_version.outputs.VERSION }}
+        draft: false
+        prerelease: ${{ contains(steps.get_version.outputs.VERSION, 'alpha') || contains(steps.get_version.outputs.VERSION, 'beta') || contains(steps.get_version.outputs.VERSION, 'rc') }}
+        body: |
+          ## Android Camera App ${{ steps.get_version.outputs.VERSION }}
+
+          ### Features
+          - 📷 Camera preview with CameraX
+          - 📱 QR code scanning with ML Kit
+          - 🌐 WebRTC video streaming
+          - 🔗 Connection QR code generation
+          - 📡 Real-time camera stream sharing
+
+          ### Downloads
+          - **AndroidCamera-release.apk**: Signed release version (recommended)
+          - **AndroidCamera-debug.apk**: Debug version for testing
+
+          ### Installation
+          1. Download the APK file
+          2. Enable "Unknown sources" in Android settings
+          3. Install the APK
+          4. Grant camera and audio permissions when prompted
+
+          ### Usage
+          1. Open the app to see camera preview
+          2. Tap the floating action button to generate connection QR code
+          3. Other devices can scan the QR code to connect to your camera stream
+          4. Navigate to QR Scanner to scan other codes
+
+          ### Requirements
+          - Android 7.0 (API level 24) or higher
+          - Camera permission
+          - Internet connection for WebRTC streaming
+        files: |
+          app/build/outputs/apk/debug/AndroidCamera-debug.apk
+          app/build/outputs/apk/release/AndroidCamera-*.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create Manual Release
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: manual-${{ github.run_number }}
+        name: Manual Build ${{ github.run_number }}
+        draft: ${{ github.event.inputs.release_type == 'draft' }}
+        prerelease: ${{ github.event.inputs.release_type == 'prerelease' }}
+        body: |
+          ## Manual Build - Android Camera App
+
+          This is a manual build triggered from the Actions tab.
+
+          ### Build Information
+          - **Commit**: ${{ github.sha }}
+          - **Branch**: ${{ github.ref_name }}
+          - **Build Number**: ${{ github.run_number }}
+
+          ### Downloads
+          - **AndroidCamera-debug.apk**: Debug version for testing
+          - **AndroidCamera-release-unsigned.apk**: Unsigned release version
+        files: |
+          app/build/outputs/apk/debug/AndroidCamera-debug.apk
+          app/build/outputs/apk/release/AndroidCamera-*.apk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Cache Gradle packages
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Run unit tests
+      run: ./gradlew test
+
+    - name: Run lint
+      run: ./gradlew lint
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          app/build/reports/tests/
+          app/build/reports/lint-results.html
