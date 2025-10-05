@@ -15,14 +15,17 @@ Android Camera is a WebRTC-based camera streaming application built with Kotlin 
 # Build release APK
 ./gradlew assembleRelease
 
-# Clean project
-./gradlew clean
+# Clean and build debug APK
+./gradlew clean assembleDebug
 
 # Run all checks (lint, test)
 ./gradlew check
 
 # Install debug APK on connected device
 ./gradlew installDebug
+
+# Grant execute permissions (if needed on Unix systems)
+chmod +x gradlew
 ```
 
 ## Architecture
@@ -64,10 +67,12 @@ Key external libraries:
 
 - **Target SDK**: 36 (Android 14+)
 - **Min SDK**: 24 (Android 7.0+)
-- **Kotlin**: 2.0.21
-- **Gradle**: 8.13.0
+- **Compile SDK**: 36
+- **Build Tools**: 35.0.0
+- **Kotlin**: Latest stable version
 - **Java**: Version 11 compatibility
 - **View Binding**: Enabled for type-safe view access
+- **Application ID**: `br.tmvdl.android.camera`
 
 ### CI/CD
 
@@ -95,3 +100,5 @@ br.tmvdl.android.camera/
 - WebRTC operations use single-threaded executor
 - Proper lifecycle management for camera and WebRTC resources
 - Error handling with logging using Android Log class
+- No unit tests currently implemented in the project
+- Proguard rules available but minification disabled in debug builds
